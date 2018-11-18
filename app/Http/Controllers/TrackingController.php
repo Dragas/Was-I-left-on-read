@@ -36,8 +36,8 @@ class TrackingController extends Controller
      */
     private function saveVisit($trap) {
         $visit = new Visit();
+        $visit->trap()->associate($trap);
         $visit->save();
-        $trap->visits()->attach($visit);
         $this->saveHeader($visit, self::REFERRER);
         $this->saveHeader($visit, self::USER_AGENT);
         $this->saveIp($visit);
@@ -49,17 +49,24 @@ class TrackingController extends Controller
      */
     private function saveHeader($visit, $header) {
         $value = request()->header($header, self::MISSING);
-        $log = new Log();
-        $log->key = $header;
-        $log->value = $value;
-        $visit->logs()->attach($log);
-        $log->save();
+        $this->saveLog($visit, $header, $value);
     }
 
     /**
      * @param $visit Visit
      */
     private function saveIp($visit) {
+        $values = request()->ips();
+        foreach($values as $key => $value) {
+            $this->saveLog($visit, self::IP, $value);
+        }
+    }
 
+    private function saveLog($visit, $key, $value) {
+        $log = new Log();
+        $log->key = $key;
+        $log->value = $value;
+        $log->visit()->associate($visit);
+        $log->save();
     }
 }
